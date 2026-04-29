@@ -98,6 +98,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     message = update.effective_message
     if not user or not message:
         return
+    logger.info("Received /start from user_id=%s username=%s", user.id, user.username or "")
     paid_note = "You are not a paid member yet." if not await _is_paid_member(user.id) else "Paid member access is active."
     text = (
         "Welcome to the task marketplace bot.\n\n"
@@ -145,6 +146,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     message = telegram_message.text.strip()
     session = await _get_or_create_session(user.id)
+    logger.info("Received text from user_id=%s step=%s text=%s", user.id, session.step, message[:80])
     data = dict(session.data or {})
 
     if session.step == "name":

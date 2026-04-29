@@ -79,7 +79,7 @@ Deploy as two services from the same GitHub repo:
      - `python manage.py migrate && python manage.py collectstatic --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT`
 2. **Worker service**
    - Start command:
-     - `python manage.py runbot`
+     - `python manage.py migrate && python manage.py runbot`
 
 Set these environment variables in Railway:
 
@@ -87,6 +87,7 @@ Set these environment variables in Railway:
 - `DEBUG=False`
 - `ALLOWED_HOSTS` (include your Railway domain)
 - `CSRF_TRUSTED_ORIGINS` (for example `https://your-app.up.railway.app`)
+- `DATABASE_URL` (from Railway Postgres plugin)
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_ADMIN_ID`
 - `TELEGRAM_PRIVATE_CHANNEL_ID`
