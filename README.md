@@ -90,6 +90,7 @@ Set these environment variables in Railway:
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_ADMIN_ID`
 - `TELEGRAM_PRIVATE_CHANNEL_ID`
+- `BOT_ENABLED` (`true` only for worker service, `false` for web service)
 - `ADMIN_WEB_KEY`
 - `TELEGRAM_PROXY_URL` (optional)
 

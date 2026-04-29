@@ -94,6 +94,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_ADMIN_ID = int(os.getenv("TELEGRAM_ADMIN_ID", "0"))
 TELEGRAM_PRIVATE_CHANNEL_ID = os.getenv("TELEGRAM_PRIVATE_CHANNEL_ID", "")
 TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "")
+BOT_ENABLED = os.getenv("BOT_ENABLED", "true").lower() == "true"
 ADMIN_WEB_KEY = os.getenv("ADMIN_WEB_KEY", "")
 
 LOGGING = {

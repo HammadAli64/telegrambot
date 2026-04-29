@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-from telegram.error import NetworkError
+from telegram.error import Conflict, NetworkError
 
 from bot.telegram_bot import build_application
 
@@ -9,6 +9,10 @@ class Command(BaseCommand):
     help = "Run Telegram bot in polling mode."
 
     def handle(self, *args, **options):
+        if not settings.BOT_ENABLED:
+            self.stdout.write(self.style.WARNING("BOT_ENABLED is false. Skipping Telegram polling startup."))
+            return
+
         if not settings.TELEGRAM_BOT_TOKEN:
             raise CommandError("TELEGRAM_BOT_TOKEN is missing in environment.")
 
@@ -16,6 +20,11 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Starting Telegram bot polling..."))
         try:
             app.run_polling(close_loop=False)
+        except Conflict as exc:
+            raise CommandError(
+                "Telegram polling conflict: another bot instance is already running. "
+                "Run polling in only one service or set BOT_ENABLED=false on others."
+            ) from exc
         except NetworkError as exc:
             raise CommandError(
                 "Network error while connecting to Telegram. "
