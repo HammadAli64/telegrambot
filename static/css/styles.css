@@ -30,6 +30,21 @@ button {
     cursor: pointer;
 }
 
+.top-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.logout-btn {
+    background: #111827;
+    color: #ffffff;
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
 button.approve {
     background: #16a34a;
     color: white;
@@ -47,4 +62,39 @@ input {
     padding: 8px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
+}
+
+select {
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+}
+
+.task-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.task-item {
+    cursor: pointer;
+}
+
+.task-item h3 {
+    margin: 0 0 8px 0;
+}
+
+.task-item.active {
+    outline: 2px solid #2563eb;
+}
+
+@media (max-width: 900px) {
+    .task-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }

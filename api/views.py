@@ -178,6 +178,7 @@ def all_tasks_api(request: HttpRequest):
     if not _authorized(request):
         return JsonResponse({"detail": "Unauthorized"}, status=401)
     query = request.GET.get("q", "").strip()
+    status = request.GET.get("status", "").strip().lower()
     page = max(int(request.GET.get("page", 1)), 1)
     page_size = max(int(request.GET.get("page_size", 10)), 1)
 
@@ -187,6 +188,8 @@ def all_tasks_api(request: HttpRequest):
             qs = qs.filter(id=int(query))
         else:
             qs = qs.filter(Q(name__icontains=query) | Q(category__icontains=query))
+    if status in {Task.STATUS_PENDING, Task.STATUS_APPROVED, Task.STATUS_REJECTED}:
+        qs = qs.filter(status=status)
 
     total = qs.count()
     start = (page - 1) * page_size

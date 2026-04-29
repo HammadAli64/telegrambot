@@ -8,15 +8,24 @@
 </head>
 <body>
     <main class="container">
-        <p><a href="/admin/logout/">Logout</a></p>
+        <div class="top-bar">
+            <a class="logout-btn" href="/admin/logout/">Logout</a>
+        </div>
         <h1>Tasks Dashboard</h1>
         <p>See all tasks, search by id/name/category, edit, approve/reject, or delete.</p>
         <section class="form-card">
             <input id="search-input" type="text" placeholder="Search by task id, name, or category">
+            <select id="status-filter">
+                <option value="">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+            </select>
             <button id="search-btn">Search</button>
             <button id="clear-btn">Clear</button>
         </section>
-        <div id="task-list"></div>
+        <div id="task-grid" class="task-grid"></div>
+        <div id="task-detail" class="card" style="display: none;"></div>
         <section class="form-card">
             <button id="prev-btn">Previous</button>
             <span id="page-info">Page 1</span>
