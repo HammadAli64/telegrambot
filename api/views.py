@@ -4,7 +4,7 @@ import logging
 from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from telegram import Bot
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _authorized(request: HttpRequest) -> bool:
-    return bool(settings.ADMIN_WEB_KEY) and request.GET.get("key") == settings.ADMIN_WEB_KEY
+    return bool(request.session.get("panel_authenticated"))
 
 
 def _task_message(task: Task) -> str:
@@ -41,21 +41,40 @@ def index(request: HttpRequest):
     return render(request, "index.html")
 
 
+def login_page(request: HttpRequest):
+    if _authorized(request):
+        return redirect("tasks_page")
+    error = ""
+    if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "").strip()
+        if username == settings.PANEL_USERNAME and password == settings.PANEL_PASSWORD:
+            request.session["panel_authenticated"] = True
+            return redirect("tasks_page")
+        error = "Invalid username or password."
+    return render(request, "login.html", {"error": error})
+
+
+def logout_page(request: HttpRequest):
+    request.session.flush()
+    return redirect("login_page")
+
+
 def pending_page(request: HttpRequest):
     if not _authorized(request):
-        return JsonResponse({"detail": "Unauthorized"}, status=401)
+        return redirect("login_page")
     return render(request, "pending.html")
 
 
 def members_page(request: HttpRequest):
     if not _authorized(request):
-        return JsonResponse({"detail": "Unauthorized"}, status=401)
+        return redirect("login_page")
     return render(request, "members.html")
 
 
 def tasks_page(request: HttpRequest):
     if not _authorized(request):
-        return JsonResponse({"detail": "Unauthorized"}, status=401)
+        return redirect("login_page")
     return render(request, "tasks.html")
 
 

@@ -1,8 +1,11 @@
-const key = new URLSearchParams(window.location.search).get("key") || "";
 const list = document.getElementById("task-list");
 
 async function request(path, method = "GET") {
-  const response = await fetch(`${path}?key=${encodeURIComponent(key)}`, { method });
+  const response = await fetch(path, { method });
+  if (response.status === 401) {
+    window.location.href = "/admin/login/";
+    return { items: [] };
+  }
   return response.json();
 }
 

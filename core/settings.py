@@ -101,6 +101,8 @@ TELEGRAM_PRIVATE_CHANNEL_ID = os.getenv("TELEGRAM_PRIVATE_CHANNEL_ID", "")
 TELEGRAM_PROXY_URL = os.getenv("TELEGRAM_PROXY_URL", "")
 BOT_ENABLED = os.getenv("BOT_ENABLED", "true").lower() == "true"
 ADMIN_WEB_KEY = os.getenv("ADMIN_WEB_KEY", "")
+PANEL_USERNAME = os.getenv("PANEL_USERNAME", "")
+PANEL_PASSWORD = os.getenv("PANEL_PASSWORD", "")
 
 LOGGING = {
     "version": 1,

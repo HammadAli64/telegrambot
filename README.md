@@ -94,6 +94,8 @@ Set these environment variables in Railway:
 - `TELEGRAM_PRIVATE_CHANNEL_ID`
 - `BOT_ENABLED` (`true` only for worker service, `false` for web service)
 - `ADMIN_WEB_KEY`
+- `PANEL_USERNAME`
+- `PANEL_PASSWORD`
 - `TELEGRAM_PROXY_URL` (optional)
 
 Add Railway Postgres plugin and ensure `DATABASE_URL` is present.  
@@ -109,12 +111,18 @@ With `DEBUG=False` and `REQUIRE_DATABASE_URL=true`, startup will fail fast if `D
 
 ## Web admin pages
 
-Use `?key=ADMIN_WEB_KEY` in URL:
+Login page:
 
+- `http://127.0.0.1:8000/admin/login/`
+
+After login:
+
+- Tasks dashboard:
+  - `http://127.0.0.1:8000/admin/tasks/`
 - Pending moderation:
-  - `http://127.0.0.1:8000/admin/pending/?key=your-key`
+  - `http://127.0.0.1:8000/admin/pending/`
 - Members:
-  - `http://127.0.0.1:8000/admin/members/?key=your-key`
+  - `http://127.0.0.1:8000/admin/members/`
 
 ## Telegram Bot Commands
 

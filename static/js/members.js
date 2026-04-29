@@ -1,17 +1,15 @@
-const params = new URLSearchParams(window.location.search);
-const key = params.get("key") || "";
 const membersList = document.getElementById("members-list");
 
 const userIdInput = document.getElementById("user-id");
 const usernameInput = document.getElementById("username");
 const fullNameInput = document.getElementById("full-name");
 
-function endpoint(path) {
-  return `${path}?key=${encodeURIComponent(key)}`;
-}
-
 async function loadMembers() {
-  const response = await fetch(endpoint("/api/members/"));
+  const response = await fetch("/api/members/");
+  if (response.status === 401) {
+    window.location.href = "/admin/login/";
+    return;
+  }
   const data = await response.json();
   membersList.innerHTML = "<h2>Active Members</h2>";
   (data.items || []).forEach((member) => {
@@ -27,11 +25,14 @@ async function loadMembers() {
 }
 
 async function postJson(path, payload) {
-  await fetch(endpoint(path), {
+  const response = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  if (response.status === 401) {
+    window.location.href = "/admin/login/";
+  }
 }
 
 document.getElementById("add-btn").addEventListener("click", async () => {

@@ -1,9 +1,4 @@
-const key = new URLSearchParams(window.location.search).get("key") || "";
 const list = document.getElementById("task-list");
-
-function endpoint(path) {
-  return `${path}?key=${encodeURIComponent(key)}`;
-}
 
 async function request(path, method = "GET", body = null) {
   const options = { method };
@@ -11,7 +6,11 @@ async function request(path, method = "GET", body = null) {
     options.headers = { "Content-Type": "application/json" };
     options.body = JSON.stringify(body);
   }
-  const response = await fetch(endpoint(path), options);
+  const response = await fetch(path, options);
+  if (response.status === 401) {
+    window.location.href = "/admin/login/";
+    return { items: [] };
+  }
   return response.json();
 }
 
