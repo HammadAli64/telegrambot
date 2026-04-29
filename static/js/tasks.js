@@ -13,6 +13,31 @@ let currentQuery = "";
 let currentStatus = "";
 let currentItems = [];
 let activeTaskId = null;
+let flashTimeout = null;
+
+function showFlash(message) {
+  let flash = document.getElementById("flash-message");
+  if (!flash) {
+    flash = document.createElement("div");
+    flash.id = "flash-message";
+    flash.className = "card";
+    flash.style.position = "fixed";
+    flash.style.top = "12px";
+    flash.style.right = "12px";
+    flash.style.zIndex = "9999";
+    flash.style.background = "#16a34a";
+    flash.style.color = "#fff";
+    flash.style.padding = "10px 14px";
+    flash.style.margin = "0";
+    document.body.appendChild(flash);
+  }
+  flash.textContent = message;
+  flash.style.display = "block";
+  if (flashTimeout) clearTimeout(flashTimeout);
+  flashTimeout = setTimeout(() => {
+    flash.style.display = "none";
+  }, 2000);
+}
 
 async function request(path, method = "GET", body = null) {
   const options = { method };
@@ -64,7 +89,6 @@ function showTaskDetail(taskId) {
     <p><strong>Status:</strong> ${task.status}</p>
     <div>
       <button id="detail-approve" class="approve">Approve</button>
-      <button id="detail-reject" class="reject">Reject</button>
       <button id="detail-save">Save</button>
       <button id="detail-delete" class="reject">Delete</button>
     </div>
@@ -72,10 +96,7 @@ function showTaskDetail(taskId) {
 
   document.getElementById("detail-approve").addEventListener("click", async () => {
     await request(`/api/task/${task.id}/approve/`, "POST");
-    await loadTasks();
-  });
-  document.getElementById("detail-reject").addEventListener("click", async () => {
-    await request(`/api/task/${task.id}/reject/`, "POST");
+    showFlash("Task approved");
     await loadTasks();
   });
   document.getElementById("detail-save").addEventListener("click", async () => {
@@ -87,10 +108,12 @@ function showTaskDetail(taskId) {
       description: document.getElementById("detail-description").value,
     };
     await request(`/api/task/${task.id}/update/`, "POST", payload);
+    showFlash("Task saved");
     await loadTasks();
   });
   document.getElementById("detail-delete").addEventListener("click", async () => {
     await request(`/api/task/${task.id}/delete/`, "POST");
+    showFlash("Task deleted");
     activeTaskId = null;
     detail.style.display = "none";
     await loadTasks();
