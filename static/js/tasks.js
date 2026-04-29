@@ -1,5 +1,13 @@
 const list = document.getElementById("task-list");
-const dbStatus = document.getElementById("db-status");
+const searchInput = document.getElementById("search-input");
+const searchBtn = document.getElementById("search-btn");
+const clearBtn = document.getElementById("clear-btn");
+const prevBtn = document.getElementById("prev-btn");
+const nextBtn = document.getElementById("next-btn");
+const pageInfo = document.getElementById("page-info");
+let currentPage = 1;
+let totalPages = 1;
+let currentQuery = "";
 
 async function request(path, method = "GET", body = null) {
   const options = { method };
@@ -25,13 +33,7 @@ function taskCard(task) {
     <label>Category <input data-field="category" value="${task.category || ""}"></label>
     <label>Address <input data-field="address" value="${task.address || ""}"></label>
     <label>Description <input data-field="description" value="${task.description || ""}"></label>
-    <label>Status
-      <select data-field="status">
-        <option value="pending" ${task.status === "pending" ? "selected" : ""}>pending</option>
-        <option value="approved" ${task.status === "approved" ? "selected" : ""}>approved</option>
-        <option value="rejected" ${task.status === "rejected" ? "selected" : ""}>rejected</option>
-      </select>
-    </label>
+    <p><strong>Status:</strong> ${task.status}</p>
     <div>
       <button class="approve">Approve</button>
       <button class="reject">Reject</button>
@@ -67,25 +69,43 @@ function taskCard(task) {
 }
 
 async function loadTasks() {
-  const status = await request("/api/system/db-status/");
-  if (status && status.task_counts) {
-    dbStatus.innerHTML = `
-      <h3>Database Status</h3>
-      <p><strong>Engine:</strong> ${status.engine || "-"}</p>
-      <p><strong>Vendor:</strong> ${status.vendor || "-"}</p>
-      <p><strong>Host:</strong> ${status.host || "-"}</p>
-      <p><strong>Name:</strong> ${status.name || "-"}</p>
-      <p><strong>Task counts:</strong> total=${status.task_counts.total}, pending=${status.task_counts.pending}, approved=${status.task_counts.approved}, rejected=${status.task_counts.rejected}</p>
-    `;
-  }
-
-  const data = await request("/api/tasks/");
+  const data = await request(`/api/tasks/?page=${currentPage}&page_size=10&q=${encodeURIComponent(currentQuery)}`);
   list.innerHTML = "";
   if (!data.items || !data.items.length) {
     list.innerHTML = "<div class='card'>No tasks found.</div>";
+    pageInfo.textContent = `Page ${currentPage}`;
     return;
   }
+  totalPages = data.total_pages || 1;
+  pageInfo.textContent = `Page ${data.page} of ${totalPages} (Total: ${data.total})`;
   data.items.forEach((task) => list.appendChild(taskCard(task)));
 }
+
+searchBtn.addEventListener("click", () => {
+  currentQuery = searchInput.value.trim();
+  currentPage = 1;
+  loadTasks();
+});
+
+clearBtn.addEventListener("click", () => {
+  searchInput.value = "";
+  currentQuery = "";
+  currentPage = 1;
+  loadTasks();
+});
+
+prevBtn.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage -= 1;
+    loadTasks();
+  }
+});
+
+nextBtn.addEventListener("click", () => {
+  if (currentPage < totalPages) {
+    currentPage += 1;
+    loadTasks();
+  }
+});
 
 loadTasks();

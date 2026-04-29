@@ -84,9 +84,18 @@ def _mark_approved(task: Task) -> None:
 
 
 @sync_to_async
+def _set_channel_message_meta(task: Task, chat_id: str, message_id: int) -> None:
+    task.channel_chat_id = str(chat_id)
+    task.channel_message_id = message_id
+    task.save(update_fields=["channel_chat_id", "channel_message_id", "updated_at"])
+
+
+@sync_to_async
 def _mark_rejected(task: Task) -> None:
+    task.channel_chat_id = ""
+    task.channel_message_id = None
     task.status = Task.STATUS_REJECTED
-    task.save(update_fields=["status", "updated_at"])
+    task.save(update_fields=["status", "channel_chat_id", "channel_message_id", "updated_at"])
 
 
 @sync_to_async
@@ -333,7 +342,8 @@ async def moderation_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         await _mark_approved(task)
         if settings.TELEGRAM_PRIVATE_CHANNEL_ID:
             try:
-                await context.bot.send_message(chat_id=settings.TELEGRAM_PRIVATE_CHANNEL_ID, text=_task_message(task))
+                sent = await context.bot.send_message(chat_id=settings.TELEGRAM_PRIVATE_CHANNEL_ID, text=_task_message(task))
+                await _set_channel_message_meta(task, str(settings.TELEGRAM_PRIVATE_CHANNEL_ID), sent.message_id)
             except Exception:
                 logger.exception("Failed posting approved task to private channel")
         await query.edit_message_text(f"Approved task #{task.id}")

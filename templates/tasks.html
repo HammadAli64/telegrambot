@@ -9,9 +9,18 @@
 <body>
     <main class="container">
         <h1>Tasks Dashboard</h1>
-        <p>See all tasks, edit task details, approve/reject, or delete tasks.</p>
-        <div id="db-status" class="card">Loading DB status...</div>
+        <p>See all tasks, search by id/name/category, edit, approve/reject, or delete.</p>
+        <section class="form-card">
+            <input id="search-input" type="text" placeholder="Search by task id, name, or category">
+            <button id="search-btn">Search</button>
+            <button id="clear-btn">Clear</button>
+        </section>
         <div id="task-list"></div>
+        <section class="form-card">
+            <button id="prev-btn">Previous</button>
+            <span id="page-info">Page 1</span>
+            <button id="next-btn">Next</button>
+        </section>
     </main>
     <script src="/static/js/tasks.js"></script>
 </body>

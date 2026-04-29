@@ -3,7 +3,7 @@ import logging
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
-from django.db import connection
+from django.db.models import Q
 from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
@@ -30,12 +30,53 @@ def _task_message(task: Task) -> str:
 
 
 def _post_approved_task(task: Task) -> None:
-    if settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_PRIVATE_CHANNEL_ID:
-        try:
-            bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
-            async_to_sync(bot.send_message)(chat_id=settings.TELEGRAM_PRIVATE_CHANNEL_ID, text=_task_message(task))
-        except Exception:
-            logger.exception("Failed posting approved task to private channel")
+    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_PRIVATE_CHANNEL_ID:
+        return
+    try:
+        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+        sent = async_to_sync(bot.send_message)(chat_id=settings.TELEGRAM_PRIVATE_CHANNEL_ID, text=_task_message(task))
+        task.channel_chat_id = str(settings.TELEGRAM_PRIVATE_CHANNEL_ID)
+        task.channel_message_id = sent.message_id
+        task.save(update_fields=["channel_chat_id", "channel_message_id", "updated_at"])
+    except Exception:
+        logger.exception("Failed posting approved task to private channel")
+
+
+def _edit_approved_task_message(task: Task) -> None:
+    if not settings.TELEGRAM_BOT_TOKEN or not task.channel_message_id:
+        return
+    chat_id = task.channel_chat_id or settings.TELEGRAM_PRIVATE_CHANNEL_ID
+    if not chat_id:
+        return
+    try:
+        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+        async_to_sync(bot.edit_message_text)(
+            chat_id=chat_id,
+            message_id=task.channel_message_id,
+            text=_task_message(task),
+        )
+    except Exception:
+        logger.exception("Failed editing approved task message in channel")
+
+
+def _delete_approved_task_message(task: Task) -> None:
+    if not settings.TELEGRAM_BOT_TOKEN or not task.channel_message_id:
+        return
+    chat_id = task.channel_chat_id or settings.TELEGRAM_PRIVATE_CHANNEL_ID
+    if not chat_id:
+        return
+    try:
+        bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+        async_to_sync(bot.delete_message)(
+            chat_id=chat_id,
+            message_id=task.channel_message_id,
+        )
+    except Exception:
+        logger.exception("Failed deleting approved task message in channel")
+    finally:
+        task.channel_message_id = None
+        task.channel_chat_id = ""
+        task.save(update_fields=["channel_message_id", "channel_chat_id", "updated_at"])
 
 
 def index(request: HttpRequest):
@@ -94,9 +135,12 @@ def approve_task_api(request: HttpRequest, task_id: int):
         return JsonResponse({"detail": "Unauthorized"}, status=401)
 
     task = get_object_or_404(Task, id=task_id)
-    task.status = Task.STATUS_APPROVED
-    task.save(update_fields=["status", "updated_at"])
-    _post_approved_task(task)
+    if task.status != Task.STATUS_APPROVED:
+        task.status = Task.STATUS_APPROVED
+        task.save(update_fields=["status", "updated_at"])
+        _post_approved_task(task)
+    else:
+        _edit_approved_task_message(task)
 
     return JsonResponse({"status": "approved"})
 
@@ -109,6 +153,8 @@ def reject_task_api(request: HttpRequest, task_id: int):
         return JsonResponse({"detail": "Unauthorized"}, status=401)
 
     task = get_object_or_404(Task, id=task_id)
+    if task.status == Task.STATUS_APPROVED:
+        _delete_approved_task_message(task)
     task.status = Task.STATUS_REJECTED
     task.save(update_fields=["status", "updated_at"])
     return JsonResponse({"status": "rejected"})
@@ -124,28 +170,23 @@ def members_api(request: HttpRequest):
 def all_tasks_api(request: HttpRequest):
     if not _authorized(request):
         return JsonResponse({"detail": "Unauthorized"}, status=401)
-    items = list(Task.objects.all().values())
-    return JsonResponse({"items": items})
+    query = request.GET.get("q", "").strip()
+    page = max(int(request.GET.get("page", 1)), 1)
+    page_size = max(int(request.GET.get("page_size", 10)), 1)
 
+    qs = Task.objects.all()
+    if query:
+        if query.isdigit():
+            qs = qs.filter(id=int(query))
+        else:
+            qs = qs.filter(Q(name__icontains=query) | Q(category__icontains=query))
 
-def db_status_api(request: HttpRequest):
-    if not _authorized(request):
-        return JsonResponse({"detail": "Unauthorized"}, status=401)
-    db_cfg = settings.DATABASES.get("default", {})
-    return JsonResponse(
-        {
-            "engine": db_cfg.get("ENGINE", ""),
-            "host": db_cfg.get("HOST", ""),
-            "name": db_cfg.get("NAME", ""),
-            "vendor": connection.vendor,
-            "task_counts": {
-                "total": Task.objects.count(),
-                "pending": Task.objects.filter(status=Task.STATUS_PENDING).count(),
-                "approved": Task.objects.filter(status=Task.STATUS_APPROVED).count(),
-                "rejected": Task.objects.filter(status=Task.STATUS_REJECTED).count(),
-            },
-        }
-    )
+    total = qs.count()
+    start = (page - 1) * page_size
+    end = start + page_size
+    items = list(qs.values()[start:end])
+    total_pages = (total + page_size - 1) // page_size if total else 1
+    return JsonResponse({"items": items, "total": total, "page": page, "page_size": page_size, "total_pages": total_pages})
 
 
 def _json_body(request: HttpRequest) -> dict:
@@ -163,7 +204,7 @@ def update_task_api(request: HttpRequest, task_id: int):
         return JsonResponse({"detail": "Unauthorized"}, status=401)
 
     body = _json_body(request)
-    allowed_fields = {"name", "phone_number", "category", "address", "description", "status"}
+    allowed_fields = {"name", "phone_number", "category", "address", "description"}
     update_fields = {}
     for key in allowed_fields:
         if key in body:
@@ -172,22 +213,13 @@ def update_task_api(request: HttpRequest, task_id: int):
     if not update_fields:
         return JsonResponse({"detail": "No valid fields provided"}, status=400)
 
-    if "status" in update_fields and update_fields["status"] not in {
-        Task.STATUS_PENDING,
-        Task.STATUS_APPROVED,
-        Task.STATUS_REJECTED,
-    }:
-        return JsonResponse({"detail": "Invalid status"}, status=400)
-
     task = get_object_or_404(Task, id=task_id)
-    previous_status = task.status
 
     for field, value in update_fields.items():
         setattr(task, field, value)
     task.save(update_fields=[*update_fields.keys(), "updated_at"])
-
-    if previous_status != Task.STATUS_APPROVED and task.status == Task.STATUS_APPROVED:
-        _post_approved_task(task)
+    if task.status == Task.STATUS_APPROVED:
+        _edit_approved_task_message(task)
 
     return JsonResponse({"status": "updated"})
 
@@ -200,6 +232,8 @@ def delete_task_api(request: HttpRequest, task_id: int):
         return JsonResponse({"detail": "Unauthorized"}, status=401)
 
     task = get_object_or_404(Task, id=task_id)
+    if task.status == Task.STATUS_APPROVED:
+        _delete_approved_task_message(task)
     task.delete()
     return JsonResponse({"status": "deleted"})
 

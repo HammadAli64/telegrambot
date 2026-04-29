@@ -11,7 +11,6 @@ urlpatterns = [
     path("admin/members/", views.members_page, name="members_page"),
     path("api/pending/", views.pending_tasks_api, name="pending_tasks_api"),
     path("api/tasks/", views.all_tasks_api, name="all_tasks_api"),
-    path("api/system/db-status/", views.db_status_api, name="db_status_api"),
     path("api/task/<int:task_id>/approve/", views.approve_task_api, name="approve_task_api"),
     path("api/task/<int:task_id>/reject/", views.reject_task_api, name="reject_task_api"),
     path("api/task/<int:task_id>/update/", views.update_task_api, name="update_task_api"),

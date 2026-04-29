@@ -19,6 +19,8 @@ class Task(dj_models.Model):
     address = dj_models.CharField(max_length=255, blank=True, default="")
     description = dj_models.TextField()
     status = dj_models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    channel_chat_id = dj_models.CharField(max_length=64, blank=True, default="")
+    channel_message_id = dj_models.BigIntegerField(null=True, blank=True)
     created_at = dj_models.DateTimeField(auto_now_add=True)
     updated_at = dj_models.DateTimeField(auto_now=True)
 
