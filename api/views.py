@@ -43,7 +43,11 @@ def _post_approved_task(task: Task) -> None:
 
 
 def _edit_approved_task_message(task: Task) -> None:
-    if not settings.TELEGRAM_BOT_TOKEN or not task.channel_message_id:
+    if not settings.TELEGRAM_BOT_TOKEN:
+        return
+    if not task.channel_message_id:
+        # Fallback for older approved tasks that were posted before message metadata existed.
+        _post_approved_task(task)
         return
     chat_id = task.channel_chat_id or settings.TELEGRAM_PRIVATE_CHANNEL_ID
     if not chat_id:
@@ -140,7 +144,10 @@ def approve_task_api(request: HttpRequest, task_id: int):
         task.save(update_fields=["status", "updated_at"])
         _post_approved_task(task)
     else:
-        _edit_approved_task_message(task)
+        if task.channel_message_id:
+            _edit_approved_task_message(task)
+        else:
+            _post_approved_task(task)
 
     return JsonResponse({"status": "approved"})
 
@@ -219,7 +226,10 @@ def update_task_api(request: HttpRequest, task_id: int):
         setattr(task, field, value)
     task.save(update_fields=[*update_fields.keys(), "updated_at"])
     if task.status == Task.STATUS_APPROVED:
-        _edit_approved_task_message(task)
+        if task.channel_message_id:
+            _edit_approved_task_message(task)
+        else:
+            _post_approved_task(task)
 
     return JsonResponse({"status": "updated"})
 
