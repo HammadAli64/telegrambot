@@ -70,6 +70,32 @@ static/
 3. Start Telegram bot polling (separate terminal):
    - `python manage.py runbot`
 
+## Railway Deployment
+
+Deploy as two services from the same GitHub repo:
+
+1. **Web service**
+   - Start command:
+     - `python manage.py migrate && python manage.py collectstatic --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT`
+2. **Worker service**
+   - Start command:
+     - `python manage.py runbot`
+
+Set these environment variables in Railway:
+
+- `DJANGO_SECRET_KEY`
+- `DEBUG=False`
+- `ALLOWED_HOSTS` (include your Railway domain)
+- `CSRF_TRUSTED_ORIGINS` (for example `https://your-app.up.railway.app`)
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_ADMIN_ID`
+- `TELEGRAM_PRIVATE_CHANNEL_ID`
+- `ADMIN_WEB_KEY`
+- `TELEGRAM_PROXY_URL` (optional)
+
+Add Railway Postgres plugin and ensure `DATABASE_URL` is present.  
+This project automatically uses `DATABASE_URL` when provided, otherwise it falls back to SQLite for local development.
+
 ## Manual paid member management
 
 - Add/activate member:
