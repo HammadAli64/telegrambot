@@ -104,7 +104,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "Welcome to the task marketplace bot.\n\n"
         "Commands:\n"
         "/post_task - submit a new task\n"
-        "/admin - admin moderation panel\n\n"
+        "\n"
         f"{paid_note}"
     )
     await message.reply_text(text)
@@ -127,7 +127,7 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not user or not message:
         return
     if user.id != settings.TELEGRAM_ADMIN_ID:
-        await message.reply_text("You are not allowed to access admin tools.")
+        await message.reply_text("Unauthorized.")
         return
 
     tasks = await _pending_tasks()
