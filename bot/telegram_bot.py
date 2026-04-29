@@ -95,6 +95,9 @@ def _task_message(task: Task) -> str:
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
     paid_note = "You are not a paid member yet." if not await _is_paid_member(user.id) else "Paid member access is active."
     text = (
         "Welcome to the task marketplace bot.\n\n"
@@ -103,70 +106,79 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "/admin - admin moderation panel\n\n"
         f"{paid_note}"
     )
-    await update.message.reply_text(text)
+    await message.reply_text(text)
 
 
 async def post_task_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
     session = await _get_or_create_session(user.id)
     data = session.data or {}
     await _save_session_step(session, "name", data)
-    await update.message.reply_text("Please enter your full name:")
+    await message.reply_text("Please enter your full name:")
 
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
     if user.id != settings.TELEGRAM_ADMIN_ID:
-        await update.message.reply_text("You are not allowed to access admin tools.")
+        await message.reply_text("You are not allowed to access admin tools.")
         return
 
     tasks = await _pending_tasks()
     if not tasks:
-        await update.message.reply_text("No pending tasks found.")
+        await message.reply_text("No pending tasks found.")
         return
 
     for task in tasks:
-        await update.message.reply_text(_task_message(task), reply_markup=_admin_keyboard(task.id))
+        await message.reply_text(_task_message(task), reply_markup=_admin_keyboard(task.id))
 
 
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
-    message = update.message.text.strip()
+    telegram_message = update.effective_message
+    if not user or not telegram_message or not telegram_message.text:
+        return
+    message = telegram_message.text.strip()
     session = await _get_or_create_session(user.id)
     data = dict(session.data or {})
 
     if session.step == "name":
         data["name"] = message
         await _save_session_step(session, "phone_number", data)
-        await update.message.reply_text("Enter phone number:")
+        await telegram_message.reply_text("Enter phone number:")
         return
 
     if session.step == "phone_number":
         data["phone_number"] = message
         await _save_session_step(session, "category", data)
-        await update.message.reply_text(f"Enter category ({', '.join(CATEGORIES)}):")
+        await telegram_message.reply_text(f"Enter category ({', '.join(CATEGORIES)}):")
         return
 
     if session.step == "category":
         data["category"] = message
         await _save_session_step(session, "address", data)
-        await update.message.reply_text("Enter address (or type '-' to skip):")
+        await telegram_message.reply_text("Enter address (or type '-' to skip):")
         return
 
     if session.step == "address":
         data["address"] = "" if message == "-" else message
         await _save_session_step(session, "description", data)
-        await update.message.reply_text("Write your task description:")
+        await telegram_message.reply_text("Write your task description:")
         return
 
     if session.step == "description":
         data["description"] = message
         task = await _create_task_from_session(user, data)
         await _delete_session(user.id)
-        await update.message.reply_text(f"Task submitted successfully as pending (ID: {task.id}).")
+        await telegram_message.reply_text(f"Task submitted successfully as pending (ID: {task.id}).")
         return
 
-    await update.message.reply_text("Use /post_task to start task submission.")
+    await telegram_message.reply_text("Use /post_task to start task submission.")
 
 
 async def moderation_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
