@@ -85,6 +85,7 @@ Set these environment variables in Railway:
 
 - `DJANGO_SECRET_KEY`
 - `DEBUG=False`
+- `REQUIRE_DATABASE_URL=true` (recommended in production)
 - `ALLOWED_HOSTS` (include your Railway domain)
 - `CSRF_TRUSTED_ORIGINS` (for example `https://your-app.up.railway.app`)
 - `DATABASE_URL` (from Railway Postgres plugin)
@@ -97,6 +98,7 @@ Set these environment variables in Railway:
 
 Add Railway Postgres plugin and ensure `DATABASE_URL` is present.  
 This project automatically uses `DATABASE_URL` when provided, otherwise it falls back to SQLite for local development.
+With `DEBUG=False` and `REQUIRE_DATABASE_URL=true`, startup will fail fast if `DATABASE_URL` is missing.
 
 ## Manual paid member management
 

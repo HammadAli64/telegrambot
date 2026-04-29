@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -56,6 +57,10 @@ WSGI_APPLICATION = "core.wsgi.application"
 ASGI_APPLICATION = "core.asgi.application"
 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+REQUIRE_DATABASE_URL = os.getenv("REQUIRE_DATABASE_URL", "true").lower() == "true"
+if not DEBUG and REQUIRE_DATABASE_URL and not DATABASE_URL:
+    raise ImproperlyConfigured("DATABASE_URL is required when DEBUG=False.")
+
 if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(
