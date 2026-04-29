@@ -1,4 +1,5 @@
 const list = document.getElementById("task-list");
+const dbStatus = document.getElementById("db-status");
 
 async function request(path, method = "GET", body = null) {
   const options = { method };
@@ -66,6 +67,18 @@ function taskCard(task) {
 }
 
 async function loadTasks() {
+  const status = await request("/api/system/db-status/");
+  if (status && status.task_counts) {
+    dbStatus.innerHTML = `
+      <h3>Database Status</h3>
+      <p><strong>Engine:</strong> ${status.engine || "-"}</p>
+      <p><strong>Vendor:</strong> ${status.vendor || "-"}</p>
+      <p><strong>Host:</strong> ${status.host || "-"}</p>
+      <p><strong>Name:</strong> ${status.name || "-"}</p>
+      <p><strong>Task counts:</strong> total=${status.task_counts.total}, pending=${status.task_counts.pending}, approved=${status.task_counts.approved}, rejected=${status.task_counts.rejected}</p>
+    `;
+  }
+
   const data = await request("/api/tasks/");
   list.innerHTML = "";
   if (!data.items || !data.items.length) {

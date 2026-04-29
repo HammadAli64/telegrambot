@@ -3,6 +3,7 @@ import logging
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
+from django.db import connection
 from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
@@ -125,6 +126,26 @@ def all_tasks_api(request: HttpRequest):
         return JsonResponse({"detail": "Unauthorized"}, status=401)
     items = list(Task.objects.all().values())
     return JsonResponse({"items": items})
+
+
+def db_status_api(request: HttpRequest):
+    if not _authorized(request):
+        return JsonResponse({"detail": "Unauthorized"}, status=401)
+    db_cfg = settings.DATABASES.get("default", {})
+    return JsonResponse(
+        {
+            "engine": db_cfg.get("ENGINE", ""),
+            "host": db_cfg.get("HOST", ""),
+            "name": db_cfg.get("NAME", ""),
+            "vendor": connection.vendor,
+            "task_counts": {
+                "total": Task.objects.count(),
+                "pending": Task.objects.filter(status=Task.STATUS_PENDING).count(),
+                "approved": Task.objects.filter(status=Task.STATUS_APPROVED).count(),
+                "rejected": Task.objects.filter(status=Task.STATUS_REJECTED).count(),
+            },
+        }
+    )
 
 
 def _json_body(request: HttpRequest) -> dict:
