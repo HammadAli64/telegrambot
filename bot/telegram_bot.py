@@ -10,6 +10,8 @@ from models.models import BotSession, PaidMember, Task
 logger = logging.getLogger(__name__)
 
 CATEGORIES = ["Design", "Development", "Marketing", "Writing", "Video Editing", "Other"]
+EDITABLE_FIELDS = {"name", "phone_number", "category", "address", "description", "status"}
+STATUS_VALUES = {Task.STATUS_PENDING, Task.STATUS_APPROVED, Task.STATUS_REJECTED}
 
 
 def _admin_keyboard(task_id: int) -> InlineKeyboardMarkup:
@@ -66,6 +68,11 @@ def _pending_tasks():
 
 
 @sync_to_async
+def _all_tasks(limit: int = 30):
+    return list(Task.objects.all()[:limit])
+
+
+@sync_to_async
 def _get_task(task_id: int):
     return Task.objects.filter(id=task_id).first()
 
@@ -80,6 +87,22 @@ def _mark_approved(task: Task) -> None:
 def _mark_rejected(task: Task) -> None:
     task.status = Task.STATUS_REJECTED
     task.save(update_fields=["status", "updated_at"])
+
+
+@sync_to_async
+def _delete_task(task_id: int) -> bool:
+    deleted, _ = Task.objects.filter(id=task_id).delete()
+    return bool(deleted)
+
+
+@sync_to_async
+def _update_task_field(task_id: int, field: str, value: str):
+    task = Task.objects.filter(id=task_id).first()
+    if not task:
+        return None
+    setattr(task, field, value)
+    task.save(update_fields=[field, "updated_at"])
+    return task
 
 
 def _task_message(task: Task) -> str:
@@ -137,6 +160,114 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     for task in tasks:
         await message.reply_text(_task_message(task), reply_markup=_admin_keyboard(task.id))
+    await message.reply_text(
+        "Admin commands:\n"
+        "/tasks - list latest tasks\n"
+        "/task_view <id>\n"
+        "/task_edit <id> <field> <value>\n"
+        "/task_delete <id>"
+    )
+
+
+async def tasks_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
+    if user.id != settings.TELEGRAM_ADMIN_ID:
+        await message.reply_text("Unauthorized.")
+        return
+
+    tasks = await _all_tasks()
+    if not tasks:
+        await message.reply_text("No tasks found.")
+        return
+    for task in tasks:
+        await message.reply_text(_task_message(task) + f"\nStatus: {task.status}")
+
+
+async def task_view_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
+    if user.id != settings.TELEGRAM_ADMIN_ID:
+        await message.reply_text("Unauthorized.")
+        return
+    if not context.args:
+        await message.reply_text("Usage: /task_view <id>")
+        return
+    try:
+        task_id = int(context.args[0])
+    except ValueError:
+        await message.reply_text("Task id must be a number.")
+        return
+    task = await _get_task(task_id)
+    if not task:
+        await message.reply_text("Task not found.")
+        return
+    await message.reply_text(_task_message(task) + f"\nStatus: {task.status}")
+
+
+async def task_delete_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
+    if user.id != settings.TELEGRAM_ADMIN_ID:
+        await message.reply_text("Unauthorized.")
+        return
+    if not context.args:
+        await message.reply_text("Usage: /task_delete <id>")
+        return
+    try:
+        task_id = int(context.args[0])
+    except ValueError:
+        await message.reply_text("Task id must be a number.")
+        return
+    if not await _delete_task(task_id):
+        await message.reply_text("Task not found.")
+        return
+    await message.reply_text(f"Deleted task #{task_id}")
+
+
+async def task_edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    message = update.effective_message
+    if not user or not message:
+        return
+    if user.id != settings.TELEGRAM_ADMIN_ID:
+        await message.reply_text("Unauthorized.")
+        return
+    if len(context.args) < 3:
+        await message.reply_text(
+            "Usage: /task_edit <id> <field> <value>\n"
+            "Fields: name, phone_number, category, address, description, status"
+        )
+        return
+    try:
+        task_id = int(context.args[0])
+    except ValueError:
+        await message.reply_text("Task id must be a number.")
+        return
+
+    field = context.args[1].strip().lower()
+    if field not in EDITABLE_FIELDS:
+        await message.reply_text("Invalid field for editing.")
+        return
+
+    value = " ".join(context.args[2:]).strip()
+    if field == "status":
+        value = value.lower()
+        if value not in STATUS_VALUES:
+            await message.reply_text("Status must be one of: pending, approved, rejected.")
+            return
+
+    task = await _update_task_field(task_id, field, value)
+    if not task:
+        await message.reply_text("Task not found.")
+        return
+    await message.reply_text(f"Updated task #{task.id} ({field}={value})")
 
 
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -223,6 +354,10 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("post_task", post_task_command))
     app.add_handler(CommandHandler("admin", admin_command))
+    app.add_handler(CommandHandler("tasks", tasks_command))
+    app.add_handler(CommandHandler("task_view", task_view_command))
+    app.add_handler(CommandHandler("task_edit", task_edit_command))
+    app.add_handler(CommandHandler("task_delete", task_delete_command))
     app.add_handler(CallbackQueryHandler(moderation_callback, pattern=r"^(approve|reject):"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
     return app
