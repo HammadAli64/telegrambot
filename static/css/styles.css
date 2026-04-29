@@ -1,0 +1,50 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    color: #1f2937;
+}
+
+.container {
+    width: min(900px, 92%);
+    margin: 32px auto;
+}
+
+h1, h2 {
+    margin-bottom: 12px;
+}
+
+.card, .form-card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+button {
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+button.approve {
+    background: #16a34a;
+    color: white;
+}
+
+button.reject {
+    background: #dc2626;
+    color: white;
+}
+
+input {
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+}
