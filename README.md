@@ -76,7 +76,7 @@ Deploy as two services from the same GitHub repo:
 
 1. **Web service**
    - Start command:
-     - `python manage.py migrate && python manage.py collectstatic --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT`
+     - `python manage.py migrate && python manage.py sync_admin_user && python manage.py collectstatic --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT`
 2. **Worker service**
    - Start command:
      - `python manage.py migrate && python manage.py runbot`
@@ -94,6 +94,9 @@ Set these environment variables in Railway:
 - `TELEGRAM_PRIVATE_CHANNEL_ID`
 - `BOT_ENABLED` (`true` only for worker service, `false` for web service)
 - `ADMIN_WEB_KEY`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `ADMIN_EMAIL` (optional)
 - `TELEGRAM_PROXY_URL` (optional)
 
 Add Railway Postgres plugin and ensure `DATABASE_URL` is present.  
@@ -115,6 +118,25 @@ Use `?key=ADMIN_WEB_KEY` in URL:
   - `http://127.0.0.1:8000/admin/pending/?key=your-key`
 - Members:
   - `http://127.0.0.1:8000/admin/members/?key=your-key`
+
+## Built-in Django Admin Panel
+
+Use Django built-in admin at:
+
+- `https://<your-domain>/django-admin/`
+
+Login credentials come from environment variables:
+
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `ADMIN_EMAIL` (optional)
+
+Task management in built-in admin supports:
+
+- view/search/filter/sort all tasks
+- edit/delete tasks
+- approve/reject selected tasks using admin actions
+- auto-post to private channel when task becomes approved
 
 ## Telegram Bot Commands
 
